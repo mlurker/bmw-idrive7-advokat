@@ -1,7 +1,7 @@
 # bmw-idrive7-advokat
 
 <p align="center">
-  <b>Engine Config (<code>live_adjustments</code>) for the BMW MGU head unit (iDrive 7).</b><br>
+  <b>Engine Config (<code>advokat_live_adjustments</code>) for the BMW MGU head unit (iDrive 7).</b><br>
   One app from <a href="https://github.com/cauliflowermossgrape/idrive7-apps">cauliflowermossgrape/idrive7-apps</a>,
   with the kit that builds and installs it, readable as a source by the
   <a href="https://github.com/robertnisipeanu/mgu-store">mgu Store</a>.
@@ -27,7 +27,7 @@ Engine Config reaches the engine control unit (DME) over the car's own diagnosti
 - **With BM3 or MHD picked in Settings:** engine map switching, burbles, ASD and Max Cooling.
 - **Experimental:** xDrive off until the ignition cycle (behind its own setting), and a read-only xDrive live tab.
 
-Its full description, settings and safety notes are in [apps/live_adjustments/README.md](apps/live_adjustments/README.md).
+Its full description, settings and safety notes are in [apps/advokat_live_adjustments/README.md](apps/advokat_live_adjustments/README.md).
 
 | | |
 |---|---|
@@ -39,7 +39,7 @@ Its full description, settings and safety notes are in [apps/live_adjustments/RE
 Add this repository as a source in the Store on the car (Settings, Sources, `mlurker/bmw-idrive7-advokat`, pick a branch).
 `mgu-repo.json` at the root makes it a *repo tree* source (see
 [PUBLISHING.md](https://github.com/robertnisipeanu/mgu-store/blob/main/docs/PUBLISHING.md), section 3): the head unit builds
-`apps/live_adjustments` from source. It lists no tools of its own, so nothing else is installed with it: the GPU renderer (`idrive7-renderd`) and the controller gate (`mgu-inputgate`) are expected to be on the car already, from the other apps' install.
+`apps/advokat_live_adjustments` from source. It lists no tools of its own, so nothing else is installed with it: the GPU renderer (`idrive7-renderd`) and the controller gate (`mgu-inputgate`) are expected to be on the car already, from the other apps' install.
 
 BMW's SDK is not in this repository and is never published here: the head unit takes it from a stock BMW app already on it.
 
@@ -54,8 +54,8 @@ scp root@<unit>:'/usr/lib/oap-mainapp/preinstalled_apps/x_call@*.tgz' .
 mkdir x_call && tar xzf x_call@*.tgz -C x_call
 node kit/tools/extract_sdk.js x_call/javascript/app.js     # writes ./oap-sdk/
 
-# 2. build the app -> dist/live_adjustments@<version>.mgu (contains BMW's SDK: keep it for your own car)
-python3 kit/tools/build.py live_adjustments
+# 2. build the app -> dist/advokat_live_adjustments@<version>.mgu (contains BMW's SDK: keep it for your own car)
+python3 kit/tools/build.py advokat_live_adjustments
 
 # 3. pack the kit (app, installer, GPU renderer) -> dist/mgu-custom-apps.tar.gz
 deploy/make-car-kit.sh              # Windows: deploy\make-car-kit.cmd
@@ -69,13 +69,13 @@ HU=root@<unit-ip> PORT=22 KEY=~/.ssh/id_mgu deploy/push-to-car.sh restore   # ba
 `deploy/push-to-car.ps1` does the same on Windows. On the unit, `sh deploy-car.sh status | backups | restore`
 (in `/var/opt/mgu-custom-apps`) shows what is installed and puts the car back to stock.
 
-Try it on your computer without a car: `node kit/tools/emu.js live_adjustments` ([docs/emulator.md](docs/emulator.md)).
+Try it on your computer without a car: `node kit/tools/emu.js advokat_live_adjustments` ([docs/emulator.md](docs/emulator.md)).
 The tests that need no car: `node kit/tools/test_live_adjustments.js` and the others in `kit/tools/test_*`.
 
 ## Layout
 
 ```
-apps/live_adjustments/   the app: app.json, main.js and its modules
+apps/advokat_live_adjustments/   the app: app.json, main.js and its modules
 kit/runtime/             the app runtime (platform glue, drawing, signals, diagnostics over TASU)
 kit/renderd/             mgu-renderd, the GPU renderer, and the controller gate (prebuilt/ = ready binaries)
 kit/tools/               build.py, make_kit.py, preview.js, emu.js, extract_sdk.js, tests

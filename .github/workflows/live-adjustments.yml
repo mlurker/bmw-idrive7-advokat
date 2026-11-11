@@ -3,7 +3,7 @@ name: Engine Config tests
 on:
   pull_request:
     paths:
-      - 'apps/live_adjustments/**'
+      - 'apps/advokat_live_adjustments/**'
       - 'kit/runtime/diag.js'
       - 'kit/runtime/readonly-diag.js'
       - 'kit/runtime/sgbd.js'
@@ -16,7 +16,7 @@ on:
       - '.github/workflows/live-adjustments.yml'
   push:
     paths:
-      - 'apps/live_adjustments/**'
+      - 'apps/advokat_live_adjustments/**'
       - 'kit/runtime/diag.js'
       - 'kit/runtime/readonly-diag.js'
       - 'kit/runtime/sgbd.js'

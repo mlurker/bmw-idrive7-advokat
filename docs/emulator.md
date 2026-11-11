@@ -4,8 +4,8 @@ Run an app on your computer, see it as the car draws it, and see each change you
 a second. You need no car, no head unit VM and no Docker: only Node.js and Python, as for the build.
 
 ```sh
-python3 kit/tools/build.py live_adjustments     # once: emu.js builds again by itself after each save
-node kit/tools/emu.js live_adjustments          # then open http://localhost:8077
+python3 kit/tools/build.py advokat_live_adjustments     # once: emu.js builds again by itself after each save
+node kit/tools/emu.js advokat_live_adjustments          # then open http://localhost:8077
 ```
 
 | Option | Does |

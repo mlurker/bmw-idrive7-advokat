@@ -1,6 +1,6 @@
 'use strict';
 
-// Engine Config's Exhaust Flap tab (apps/live_adjustments) without an SDK, build or car:
+// Engine Config's Exhaust Flap tab (apps/advokat_live_adjustments) without an SDK, build or car:
 //   auto.js     Drive mode, hold, the Close rpm guard and the no-rpm fail-safe against a fake controller;
 //   controller  Open / Close / OEM against a fake DME through the real diagnostic link (diaglink.js, kit diag);
 //   picture     the silencer layer (GPU ops) and its software pixels; the tab drawn in every state;
@@ -14,7 +14,7 @@ const path = require('path');
 const Module = require('module');
 
 const ROOT = path.join(__dirname, '..', '..');
-const APP = path.join(ROOT, 'apps', 'live_adjustments');
+const APP = path.join(ROOT, 'apps', 'advokat_live_adjustments');
 const KIT = path.join(ROOT, 'kit', 'runtime');
 const load = Module._load;
 Module._load = function (req, parent, isMain) {                 // the app's ./kit/* is kit/runtime/* in the repo

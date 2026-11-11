@@ -2,7 +2,7 @@
 """MGU App Kit build: apps/<id>/app.json + main.js  ->  installable app.
 
     python3 kit/tools/build.py            # build every app in apps/
-    python3 kit/tools/build.py live_adjustments # just one
+    python3 kit/tools/build.py advokat_live_adjustments # just one
 
 Produces in dist/:
     <id>@<ver>.mgu   install bundle for deploy/mgu-app-install.sh (VM and car)

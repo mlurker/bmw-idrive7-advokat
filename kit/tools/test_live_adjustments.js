@@ -5,9 +5,9 @@
 //   node kit/tools/test_live_adjustments.js
 
 const assert = require('assert');
-const { TuneControl } = require('../../apps/live_adjustments/tune');
-const { CommandDriver, MG_FLASHER } = require('../../apps/live_adjustments/tuners');
-const { XDriveControl } = require('../../apps/live_adjustments/xdrive');
+const { TuneControl } = require('../../apps/advokat_live_adjustments/tune');
+const { CommandDriver, MG_FLASHER } = require('../../apps/advokat_live_adjustments/tuners');
+const { XDriveControl } = require('../../apps/advokat_live_adjustments/xdrive');
 
 function dme(kind) {
     const calls = [];

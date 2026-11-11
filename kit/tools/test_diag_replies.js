@@ -13,8 +13,8 @@ const root = path.resolve(__dirname, '..', '..');
 // Stage the app with the transport as the build lays it out (./kit/diag), and stubs for the screen kit.
 const src = fs.mkdtempSync(path.join(os.tmpdir(), 'live-adjustments-'));
 fs.mkdirSync(path.join(src, 'kit'));
-for (const f of fs.readdirSync(path.join(root, 'apps/live_adjustments')).filter((f) => f.endsWith('.js'))) {
-    fs.copyFileSync(path.join(root, 'apps/live_adjustments', f), path.join(src, f));
+for (const f of fs.readdirSync(path.join(root, 'apps/advokat_live_adjustments')).filter((f) => f.endsWith('.js'))) {
+    fs.copyFileSync(path.join(root, 'apps/advokat_live_adjustments', f), path.join(src, f));
 }
 fs.copyFileSync(path.join(root, 'kit/runtime/diag.js'), path.join(src, 'kit/diag.js'));
 const any = 'module.exports = (o) => new Proxy(o, { get: (t, k) => (k in t ? t[k] : () => 0) });\n';
@@ -148,7 +148,7 @@ const echo = (sid, data) => [sid + 0x40].concat(data);
 
     // 6. Settings: with the DME found, a theme change sends nothing; Car control re-detects it; while none
     // was found (asleep at start-up), any change looks again.
-    const keys = require(path.join(root, 'apps/live_adjustments/app.json')).settings.map((x) => x.key);
+    const keys = require(path.join(root, 'apps/advokat_live_adjustments/app.json')).settings.map((x) => x.key);
     const { REFRESH_KEYS } = require(path.join(src, 'controller'));
     assert(REFRESH_KEYS.every((k) => keys.includes(k)), 'REFRESH_KEYS names a key that is not a setting: ' + REFRESH_KEYS);
     const sent = [];

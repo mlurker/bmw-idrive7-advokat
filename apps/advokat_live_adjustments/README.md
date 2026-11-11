@@ -92,7 +92,7 @@ slot, and which slots are valid), which make the screen say *confirmed*. A tune 
 top of `tuners.js`). Then add the choice to `tuner` in `app.json` and a test case in
 `kit/tools/test_live_adjustments.js` (it has a SPEC with made-up bytes as the model). Contributions from owners who can capture the commands
 on their own car are welcome; please test in the live emulator (`node kit/tools/emu.js
-live_adjustments`) before opening a PR.
+advokat_live_adjustments`) before opening a PR.
 
 ## xDrive (experimental)
 
@@ -201,7 +201,7 @@ Review the rest of the app log for personal information before sharing it.
 ## Build and test
 
 ```sh
-python3 kit/tools/build.py live_adjustments
+python3 kit/tools/build.py advokat_live_adjustments
 node kit/tools/test_live_adjustments.js     # in-memory DMEs: off / MHD / BM3 / MG Flasher spec / wrong tune / untuned; in-memory DSC: xDrive
 node kit/tools/test_bm3_protocol.js         # BM3 protocol and ROM profiles
 ```

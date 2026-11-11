@@ -4,7 +4,7 @@
 Windows (Python 3.6+ and Node.js; no bash, no Docker needed).
 
     python3 kit/tools/make_kit.py                 # all apps in apps/
-    python3 kit/tools/make_kit.py live_adjustments ...  # only these
+    python3 kit/tools/make_kit.py advokat_live_adjustments ...  # only these
     (deploy/make-car-kit.sh and deploy\\make-car-kit.cmd call this)
 
 Output: dist/mgu-custom-apps/ and dist/mgu-custom-apps.tar.gz

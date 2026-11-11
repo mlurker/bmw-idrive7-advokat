@@ -341,7 +341,7 @@ function drawMuffler(cv, G, t, x, y, w, h, v) {
     const open = v.angle == null ? (v.confirmed === 'OPEN' ? 1 : 0) : Math.max(0, Math.min(1, v.angle));
     // the picture: a cached layer (drawn once into a texture, one blit a frame), at its own size
     const ix = Math.round(x + (w - IMG.LW) / 2), iy = Math.round(y + Math.max(0, (h - IMG.LH) / 2));
-    const pic = G.layer('live_adjustments_muffler', IMG.LW, IMG.LH, (c) => IMG.draw(c), cv.textScale);
+    const pic = G.layer('advokat_live_adjustments_muffler', IMG.LW, IMG.LH, (c) => IMG.draw(c), cv.textScale);
     // the software renderer would play the layer's shaded triangles in flat colours: it gets the picture as pixels
     // instead (made the first time it asks; the GPU never reads pic.soft)
     if (pic && !pic.mufflerSoft) {

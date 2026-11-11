@@ -3,7 +3,7 @@
  * emu.js - live emulator: a built app running with the real runtime, drawn in the browser by the car's
  * GPU draw engine (kit/renderd/src/gfx.c as WebAssembly, kit/emu/web/gfx/).
  *
- *   node kit/tools/emu.js live_adjustments [--port 8077] [--bg screenshot.png] [--no-touch]   ->  http://localhost:8077 (this computer only)
+ *   node kit/tools/emu.js advokat_live_adjustments [--port 8077] [--bg screenshot.png] [--no-touch]   ->  http://localhost:8077 (this computer only)
  *
  * Three parts in this process:
  *   app       python3 kit/tools/build.py <id>, then dist/<id> in a child node (hu-stub.js: a stubbed head
