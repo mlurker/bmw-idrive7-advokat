@@ -1,0 +1,45 @@
+name: Kit tests
+
+# The kit runtime's synthetic checks (no SDK, renderer or car needed). Engine Config has its own in
+# live-adjustments.yml; the renderer's are in renderd.yml.
+on:
+  pull_request:
+    paths:
+      - 'kit/runtime/**'
+      - 'kit/tools/test_*'
+      - 'kit/tools/fixtures/**'
+      - 'kit/localization/**'
+      - 'kit/tools/build.py'
+      - 'kit/tools/pack_data.py'
+      - 'kit/tools/localize.py'
+      - 'kit/tools/bake_cjk.py'
+      - 'kit/tools/locale-revisions.json'
+      - '.github/workflows/app-tests.yml'
+  push:
+    paths:
+      - 'kit/runtime/**'
+      - 'kit/tools/test_*'
+      - 'kit/tools/fixtures/**'
+      - 'kit/localization/**'
+      - 'kit/tools/build.py'
+      - 'kit/tools/pack_data.py'
+      - 'kit/tools/localize.py'
+      - 'kit/tools/bake_cjk.py'
+      - 'kit/tools/locale-revisions.json'
+      - '.github/workflows/app-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node kit/tools/test_runtime.js
+      - run: node kit/tools/test_dids.js
+      - run: node kit/tools/test_engine.js
+      - run: node kit/tools/test_zh.js
