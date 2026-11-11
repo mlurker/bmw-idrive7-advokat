@@ -85,6 +85,7 @@ mgu.run({
             cooling: (on) => tuneAct(() => tune.setCooling(on)),
             aggDown: () => { tune.stepAggression(-0.5); repaint(); },
             aggUp: () => { tune.stepAggression(0.5); repaint(); },
+            burbleSlot: (n) => tuneAct(() => tune.setBurbleSlot(n)),
             burblesApply: tuneAct(() => tune.applyBurbles(false)),
             burblesOff: tuneAct(() => tune.applyBurbles(true)),
             asd: (on) => tuneAct(() => tune.setAsd(on)),

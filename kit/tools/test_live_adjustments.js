@@ -6,6 +6,7 @@
 
 const assert = require('assert');
 const { TuneControl } = require('../../apps/live_adjustments/tune');
+const { CommandDriver, MG_FLASHER } = require('../../apps/live_adjustments/tuners');
 const { XDriveControl } = require('../../apps/live_adjustments/xdrive');
 
 function dme(kind) {
@@ -29,6 +30,11 @@ function dme(kind) {
             if (sid === 0x23) return [0x63].concat(memory[addr()].slice(0, data[5]));
             if (sid === 0x3D) { memory[addr()] = data.slice(6); return [0x7D]; }
             if (sid === 0x2E) return [0x6E].concat(data.slice(0, 2));
+        }
+        // MG Flasher (from its Android app): 2E <DID> <value> <checksum> -> 6E <DID>; the checksum is checked here
+        if (kind === 'mgreal' && sid === 0x2E && data[0] === 0x69 && data.length === 4) {
+            if (((data[0] + data[1] + data[2]) & 0xFF) !== data[3]) return [0x7F, 0x2E, 0x31];
+            return [0x6E, data[0], data[1]];
         }
         if (sid === 0x2C) return [0x7F, 0x2C, 0x33];                    // no BM3 ROM (as on an MHD car)
         if (kind === 'mhd' && sid === 0x2F) return [0x6F].concat(data);  // MHD-style: echo
@@ -540,9 +546,173 @@ async function xdriveChecks() {
     assert(s.events.slice(count).every((e) => e.attemptId === null));
 }
 
+
+// A tune built from a SPEC (tuners.js) - here MADE-UP bytes standing in for MG Flasher's, to test the generic path:
+// identification, read-back, slots the DME does not offer, the engine gate. The real MG Flasher spec has no
+// bytes yet: it must send nothing and say so.
+function mgDme(state) {
+    const calls = [];
+    const hex = (a) => a.map((b) => b.toString(16).padStart(2, '0')).join(' ');
+    const link = {
+        available: true,
+        async sendToDme(sid, data) {
+            await new Promise(setImmediate);
+            calls.push(hex([sid].concat(data)));
+            const key = hex([sid].concat(data.slice(0, 2)));
+            if (key === '22 aa 01') return { ok: true, sid: 0x62, data: [0xAA, 0x01, state.major, state.minor] };
+            if (key === '22 aa 02') return { ok: true, sid: 0x62, data: [0xAA, 0x02, state.map, state.burble, state.mapMask, state.burbleMask] };
+            if (key === '2e bb 01') { if (!state.ignoreWrite) state.map = data[2]; return { ok: true, sid: 0x6E, data: data.slice(0, 2) }; }
+            if (key === '2e bb 02') { state.burble = data[2]; return { ok: true, sid: 0x6E, data: data.slice(0, 2) }; }
+            if (key === '2f bb 03') return { ok: true, sid: 0x6F, data: data.slice() };
+            return { ok: false, nrc: 0x31, reason: 'NRC 31' };
+        },
+    };
+    return { calls, link, state };
+}
+const BITS = (mask, n, first) => Array.from({ length: n }, (_, i) => i).filter((i) => mask & (1 << i)).map((i) => i + first);
+const TEST_SPEC = {
+    id: 'mgflasher', label: 'MG Flasher',
+    map: { slots: 5, request: (n) => ({ sid: 0x2E, data: [0xBB, 0x01, n - 1] }) },
+    burbles: { slots: 6, request: (s) => ({ sid: 0x2E, data: [0xBB, 0x02, s] }) },
+    cooling: { request: (on) => ({ sid: 0x2F, data: [0xBB, 0x03, on ? 1 : 0] }), needsEngine: true },
+    // a 2E / 2F reply echoes the two identifier bytes only
+    ack: (r, q) => r.sid === q.sid + 0x40 && q.data.slice(0, 2).every((b, i) => r.data[i] === b),
+    identify: {
+        request: () => ({ sid: 0x22, data: [0xAA, 0x01] }),
+        parse: (r) => { const v = r.data[2] + r.data[3] / 10; if (v < 6.9) throw new Error('Custom Code ' + v + ' is too old'); return 'Custom Code ' + v; },
+    },
+    read: {
+        request: () => ({ sid: 0x22, data: [0xAA, 0x02] }),
+        parse: (r) => ({ map: r.data[2] + 1, burbles: r.data[3], validMaps: BITS(r.data[4], 5, 1), validBurbles: BITS(r.data[5], 6, 0) }),
+    },
+};
+async function mgSetup(state, rpm) {
+    const m = mgDme(state);
+    const ctx = { settings: { get: (k) => (k === 'tuner' ? 'mgflasher' : undefined) },
+        log: { info() {}, warn() {}, error() {} }, spec: { config: {} } };
+    const engine = { value: rpm === undefined ? 800 : rpm, rpm() { return this.value; } };
+    const tune = new TuneControl(ctx, engine);
+    tune.link = m.link;
+    tune._drivers.mgflasher = new CommandDriver(TEST_SPEC, m.link);
+    await tune.refresh();
+    return { tune, m, engine };
+}
+
+async function mgFlasherChecks() {
+    // The real spec (the requests MG Flasher's Android app sends): UDS write of a value and a checksum byte, accepted on 6E + DID.
+    const real = await setup('mgreal', 'mgflasher', true, 0);              // engine stopped: Max Cooling is not gated
+    assert.deepStrictEqual(real.tune.features(), { map: true, cooling: true, burbles: true, asd: false });
+    assert.strictEqual(real.tune.view().mapSlots, 5);
+    assert.strictEqual(real.tune.view().burbleSlots, 6);
+    assert.strictEqual(real.tune.view().readback, false);
+    assert.deepStrictEqual(real.d.calls, [], 'nothing is read before the addresses are known');
+    await real.tune.setMap(3);
+    assert.strictEqual(real.d.calls.at(-1), '2e 69 45 02 b0');             // slot 2: 0x45 + 0x69 + 2
+    assert.strictEqual(real.tune.map, 3);
+    assert.strictEqual(real.tune.mapConfirmed, false);
+    assert.strictEqual(real.tune.note, 'Map 3 · accepted by the DME');
+    await real.tune.setMap(1);
+    assert.strictEqual(real.d.calls.at(-1), '2e 69 45 00 ae');
+    await real.tune.setMap(5);
+    assert.strictEqual(real.d.calls.at(-1), '2e 69 45 04 b2');
+    await real.tune.setBurbleSlot(1);
+    assert.strictEqual(real.d.calls.at(-1), '2e 69 46 01 b0');             // 0x46 + 0x69 + 1
+    assert.strictEqual(real.tune.burbles, 1);
+    assert.strictEqual(real.tune.note, 'Burbles slot 1 · accepted by the DME');
+    await real.tune.setBurbleSlot(5);
+    assert.strictEqual(real.d.calls.at(-1), '2e 69 46 05 b4');
+    await real.tune.setCooling(true);
+    assert.strictEqual(real.d.calls.at(-1), '2e 69 47 01 b1');
+    assert.strictEqual(real.tune.cooling, 'ON');
+    await real.tune.setCooling(false);
+    assert.strictEqual(real.d.calls.at(-1), '2e 69 47 00 b0');
+    real.d.calls.length = 0;
+    await real.tune.setMap(6); await real.tune.setMap(0); await real.tune.setBurbleSlot(6); await real.tune.setBurbleSlot(-1);
+    await real.tune.applyBurbles(false); await real.tune.setAsd(true);     // not this tune's controls
+    assert.deepStrictEqual(real.d.calls, [], 'an out-of-range slot was sent');
+
+    // The DME is busy (NRC 21): the request is sent again, as MG Flasher's app does; a DME that never answers gives up.
+    const busy = await setup('mgreal', 'mgflasher');
+    busy.tune._drivers.mgflasher = new CommandDriver(Object.assign({}, MG_FLASHER, { retry: { nrc: 0x21, times: 20, delayMs: 1 } }), busy.d.link);
+    const send = busy.d.link.sendToDme;
+    let left = 2;
+    busy.d.link.sendToDme = async (sid, data) => (left-- > 0 ? { ok: false, nrc: 0x21, reason: 'NRC 21' } : send(sid, data));
+    await busy.tune.setMap(2);
+    assert.strictEqual(busy.tune.map, 2);
+    assert.strictEqual(busy.tune.noteType, 'go');
+    busy.d.link.sendToDme = async () => ({ ok: false, nrc: 0x21, reason: 'NRC 21' });
+    await busy.tune.setMap(3);
+    assert.strictEqual(busy.tune.noteType, 'warn');
+    assert.strictEqual(busy.tune.map, 2, 'a map the busy DME never took was recorded');
+
+    // A DME without the MG Flasher Custom Code refuses the write: nothing is recorded.
+    const plain = await setup('stock', 'mgflasher');
+    await plain.tune.setMap(2);
+    assert.strictEqual(plain.tune.note, 'Not available on this car');
+    assert.strictEqual(plain.tune.map, null);
+
+    // Made-up bytes: identified, state read, slots the DME does not offer, read-back confirmation.
+    const st = { major: 7, minor: 1, map: 2, burble: 4, mapMask: 0b01111, burbleMask: 0b011111 };
+    let s = await mgSetup(st);
+    assert.deepStrictEqual(s.m.calls, ['22 aa 01', '22 aa 02']);
+    assert.strictEqual(s.tune.verified, true);
+    assert.strictEqual(s.tune.map, 3);
+    assert.strictEqual(s.tune.mapConfirmed, true);
+    assert.strictEqual(s.tune.burbles, 4);
+    assert.deepStrictEqual(s.tune.validMaps, [1, 2, 3, 4]);
+    assert.deepStrictEqual(s.tune.validBurbles, [0, 1, 2, 3, 4]);
+    assert.strictEqual(s.tune.note, 'MG Flasher Custom Code 7.1');
+    assert.strictEqual(s.tune.view().readback, true);
+    s.m.calls.length = 0;
+    await s.tune.setMap(2);
+    assert.deepStrictEqual(s.m.calls, ['2e bb 01 01', '22 aa 02']);       // write, then read back
+    assert.strictEqual(s.tune.map, 2);
+    assert.strictEqual(s.tune.note, 'Map 2 · confirmed by the DME');
+    await s.tune.setBurbleSlot(3);
+    assert.strictEqual(s.tune.burbles, 3);
+    assert.strictEqual(s.tune.note, 'Burbles slot 3 · confirmed by the DME');
+    s.m.calls.length = 0;
+    await s.tune.setMap(5);                                                // a slot the DME does not offer
+    await s.tune.setBurbleSlot(5);
+    await s.tune.setBurbleSlot(6);
+    await s.tune.setMap(6);
+    assert.deepStrictEqual(s.m.calls, [], 'a slot that is not offered was sent');
+    assert.strictEqual(s.tune.noteType, 'warn');
+    await s.tune.setCooling(true);
+    assert.strictEqual(s.m.calls.at(-1), '2f bb 03 01');
+    assert.strictEqual(s.tune.cooling, 'ON');
+    await s.tune.applyBurbles(false); await s.tune.setAsd(true);          // not this tune's features
+    assert.strictEqual(s.m.calls.length, 1);
+
+    // The DME does not take the map: the read-back differs, the screen says so, the old map stays.
+    s = await mgSetup({ major: 7, minor: 1, map: 2, burble: 0, mapMask: 0b11111, burbleMask: 0b111111, ignoreWrite: true });
+    await s.tune.setMap(4);
+    assert(/readback differs/.test(s.tune.note), s.tune.note);
+    assert.strictEqual(s.tune.noteType, 'warn');
+    assert.strictEqual(s.tune.map, 3);
+
+    // Custom Code too old: identification fails, nothing is written.
+    s = await mgSetup({ major: 6, minor: 5, map: 0, burble: 0, mapMask: 31, burbleMask: 63 });
+    assert.strictEqual(s.tune.noteType, 'warn');
+    assert(/too old/.test(s.tune.note));
+    assert.strictEqual(s.tune.verified, false);
+    s.m.calls.length = 0;
+    await s.tune.setMap(2); await s.tune.setBurbleSlot(1); await s.tune.setCooling(false);
+    assert.deepStrictEqual(s.m.calls, [], 'a write went to a DME that was not identified');
+
+    // Max Cooling ON needs the engine running, as for MHD.
+    s = await mgSetup({ major: 7, minor: 1, map: 0, burble: 0, mapMask: 31, burbleMask: 63 }, 300);
+    s.m.calls.length = 0;
+    await s.tune.setCooling(true);
+    assert.deepStrictEqual(s.m.calls, []);
+    assert(/Start the engine/.test(s.tune.note));
+    await s.tune.setCooling(false);
+    assert.strictEqual(s.m.calls.at(-1), '2f bb 03 00');
+}
+
 (async () => {
     // Off (the default) - and an unknown value counts as Off: nothing is sent, no tune tab.
-    for (const v of ['off', undefined, 'on', 'mgflasher']) {
+    for (const v of ['off', undefined, 'on', 'flasher']) {
         const s = await setup('mhd', v);
         assert.deepStrictEqual(s.tune.features(), NONE);
         await s.tune.setMap(2); await s.tune.setCooling(true); await s.tune.applyBurbles(false); await s.tune.setAsd(true);
@@ -663,6 +833,7 @@ async function xdriveChecks() {
     assert(!s.d.calls.some((c) => c.startsWith('3d')), 'a press was sent during a refresh');
     assert.strictEqual(s.tune.verified, true);
 
+    await mgFlasherChecks();
     await xdriveChecks();
-    console.log('Live Adjustments tune checks passed (off / MHD echo / cooling rpm gate / BM3 read-back + ASD / wrong tune / untuned / late link / one request at a time / xDrive).');
+    console.log('Live Adjustments tune checks passed (off / MHD echo / cooling rpm gate / BM3 read-back + ASD / MG Flasher spec / wrong tune / untuned / late link / one request at a time / xDrive).');
 })().catch((e) => { console.error(e); process.exit(1); });

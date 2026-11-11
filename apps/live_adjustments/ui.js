@@ -117,37 +117,45 @@ function noteLine(cv, G, t, m, bottom) {
     cv.text(m.note, W / 2, bottom - 80, 18, c, { align: 'center', font: 'label' });
 }
 
-/** A row of equal buttons centred across the page bottom; spec = [label, run, selected]. */
+/** A row of equal buttons centred across the page bottom; spec = [label, run, selected, disabled]
+ * (disabled: drawn dimmed, nothing to press: a slot the DME does not offer). */
 function buttonRow(cv, G, t, specs, bottom, bw, busy, keyPrefix) {
     const bh = 56, gap = 26, by = bottom - 56;
     let bx = (W - (specs.length * bw + (specs.length - 1) * gap)) / 2;
-    specs.forEach(([label, run, on], i) => {
-        const opts = { key: keyPrefix + i, busy: !!busy };
+    specs.forEach(([label, run, on, off], i) => {
+        const opts = { key: keyPrefix + i, busy: !!busy || !!off };
         if (on) Object.assign(opts, { color: RED(t), primary: true });
         G.button(cv, t, bx, by, bw, bh, label, run || (() => {}), opts);
         bx += bw + gap;
     });
 }
 
-/** Engine Map: the active map big, four slot bars, MAP 1-4 (one press switches). */
+/** The buttons' width for n of them in a row: 200, narrower when n do not fit across the panel. */
+const rowButtonW = (n) => Math.min(200, Math.floor((W - 160 - (n - 1) * 26) / n));
+/** valid = the numbers the DME offers (null: all); is n one of them. */
+const offered = (valid, n) => !valid || valid.indexOf(n) >= 0;
+
+/** Engine Map: the active map big, one bar per slot, one button per map (one press switches). */
 function drawMap(cv, G, t, m, act, bottom) {
     const cy = G.TOP + (bottom - G.TOP - 96) / 2 - 20;
     cv.text(m.map ? 'MAP ' + m.map : 'MAP –', W / 2, cy + 30, 112, m.map ? t.text : t.dim,
         { align: 'center', font: 'bold', spacing: 4 });
     cv.text(m.map ? (m.mapConfirmed ? 'Active map · read from the DME' : 'Selected map · accepted by the DME')
         : 'Pick a map', W / 2, cy + 74, 18, t.dim, { align: 'center', font: 'label', spacing: 1 });
-    const pw = 120, pg = 18, px0 = (W - (4 * pw + 3 * pg)) / 2;
-    for (let i = 0; i < 4; i++) {
+    const n = m.mapSlots || 4;
+    const pw = n > 4 ? 100 : 120, pg = 18, px0 = (W - (n * pw + (n - 1) * pg)) / 2;
+    for (let i = 0; i < n; i++) {
         cv.roundRect(px0 + i * (pw + pg), cy + 96, pw, 8, 4, m.map === i + 1 ? RED(t) : G.withAlpha('#ffffff', 0.12));
     }
     // seen on the owner's MG1 (MHD): the DME flashes the engine light while it changes maps
-    if (m.features && m.features.map && !m.readback) {
+    if (m.tuner === 'mhd') {
         cv.text('The engine light may flash while the map changes — that is normal', W / 2, cy + 134, 16,
             t.dim, { align: 'center', font: 'label' });
     }
     noteLine(cv, G, t, m, bottom);
-    buttonRow(cv, G, t, [1, 2, 3, 4].map((n) => ['Map ' + n, act.map && act.map(n), m.map === n]),
-        bottom, 200, m.busy, 'la_map');
+    buttonRow(cv, G, t, Array.from({ length: n }, (_, i) => i + 1).map((k) =>
+        ['Map ' + k, act.map && act.map(k), m.map === k, !offered(m.validMaps, k)]),
+        bottom, rowButtonW(n), m.busy, 'la_map');
     return cv;
 }
 
@@ -168,8 +176,10 @@ function drawCooling(cv, G, t, m, act, bottom) {
     return cv;
 }
 
-/** Burbles: the DME's state and the picked aggression; -/+ pick, Apply sends, Off disables. */
+/** Burbles: the DME's state and the picked aggression; -/+ pick, Apply sends, Off disables. A tune with burble
+ * slots (m.burbleSlots) shows the slot instead: one button per slot, one press picks it. */
 function drawBurbles(cv, G, t, m, act, bottom) {
+    if (m.burbleSlots) return drawBurbleSlots(cv, G, t, m, act, bottom);
     const cy = G.TOP + (bottom - G.TOP - 96) / 2 - 20;
     const agg = typeof m.targetAgg === 'number' ? m.targetAgg : 0;
     cv.text(agg.toFixed(1), W / 2, cy + 30, 112, t.text, { align: 'center', font: 'bold', spacing: 4 });
@@ -181,6 +191,18 @@ function drawBurbles(cv, G, t, m, act, bottom) {
     buttonRow(cv, G, t, [['–', act.aggDown, false], ['+', act.aggUp, false],
         ['Apply', act.burblesApply, false], ['Off', act.burblesOff, m.burbles === 'off']],
         bottom, 200, m.busy, 'la_burb');
+    return cv;
+}
+
+function drawBurbleSlots(cv, G, t, m, act, bottom) {
+    const cy = G.TOP + (bottom - G.TOP - 96) / 2 - 20;
+    const known = typeof m.burbles === 'number';
+    cv.text(known ? String(m.burbles) : '–', W / 2, cy + 30, 112, known ? t.text : t.dim, { align: 'center', font: 'bold', spacing: 4 });
+    cv.text('Burble slot · 0 is the first', W / 2, cy + 74, 18, t.dim, { align: 'center', font: 'label', spacing: 1 });
+    noteLine(cv, G, t, m, bottom);
+    const slots = Array.from({ length: m.burbleSlots }, (_, i) => i);
+    buttonRow(cv, G, t, slots.map((k) => [String(k), act.burbleSlot && act.burbleSlot(k), m.burbles === k, !offered(m.validBurbles, k)]),
+        bottom, rowButtonW(slots.length), m.busy, 'la_burbs');
     return cv;
 }
 

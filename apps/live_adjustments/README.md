@@ -34,19 +34,19 @@ becomes OEM and stays OEM until Close is pressed again; Drive mode's Eco Pro bec
 Close comes back by itself once a live engine speed below the limit is back. Demo data never
 counts as an engine speed. Tests: `kit/tools/test_live_adjustments_exhaust.js`.
 
-## Tuned DME: BM3 and MHD
+## Tuned DME: BM3, MHD and MG Flasher
 
 Engine Map, Burbles, Active Sound and Max Cooling are **not BMW jobs**: the tuner's code in
 the DME handles them. Pick the tuning software the car runs in Settings, *Tuning software*,
 and its tabs appear. It ships **Off**, and then nothing at all is sent — no detection, no
 command — and no extra tab appears. Code: `tune.js`.
 
-| Tab | BM3 | MHD |
-|---|---|---|
-| Engine Map | maps 1–4, memory write, confirmed by read-back | `2F 01 <map-1>`, accepted on the DME's echo |
-| Burbles | aggression 0–12 in 0.5 steps, read-back, Off | — |
-| Active Sound | ASD on / off (`2E 5FFD 00` / `01`), accepted, not read back | — |
-| Max Cooling | — | `2F 03 01` / `2F 03 00`, accepted on the echo; **On only with the engine running** (live engine speed over 500 rpm, demo data never counts); Off always |
+| Tab | BM3 | MHD | MG Flasher |
+|---|---|---|---|
+| Engine Map | maps 1–4, memory write, confirmed by read-back | `2F 01 <map-1>`, accepted on the DME's echo | slots 1–5 (MG Flasher's 0–4); slots the DME does not offer are greyed out |
+| Burbles | aggression 0–12 in 0.5 steps, read-back, Off | — | slots 0–5 (one press picks one) |
+| Active Sound | ASD on / off (`2E 5FFD 00` / `01`), accepted, not read back | — | — |
+| Max Cooling | — | `2F 03 01` / `2F 03 00`, accepted on the echo; **On only with the engine running** (live engine speed over 500 rpm, demo data never counts); Off always | on / off, same engine rule |
 
 **BM3** (this replaces the separate BM3 Live app; `bm3_protocol.js`, `bm3_profiles.js`): when
 BM3 is picked, the app reads the CustomROM marker and it must match a known ROM profile in
@@ -67,9 +67,30 @@ the check engine light flash (MHD's map-change indication) — the map page says
 normal. None of the DIDs MHD reads (`22 3010/3020/3030/3031/3032/37FE/586A/4098`) changed
 between map 1 and map 2. BM3: limited smoke testing on one G22 (as the former BM3 Live app).
 
-**Other tuning software** (MG Flasher and others): add a choice to the `tuner` setting in
-`app.json`, its tabs to `FEATURES` in `tune.js` and its commands there, with a test case in
-`kit/tools/test_live_adjustments.js`. Contributions from owners who can capture the commands
+**MG Flasher** (Custom Code 6.9 and later; maps, burbles and Max Cooling as in its Live Control): the requests are
+the ones MG Flasher's own Android app sends to the DME (`0x12`), a UDS write whose two data bytes are the value and
+a checksum, `2E <DID hi> <DID lo> <value> <(DID hi + DID lo + value) & 0xFF>`, answered `6E <DID>`:
+
+| Control | DID | Value | Example |
+|---|---|---|---|
+| Engine Map | `0x6945` | slot 0–4 (the buttons are Map 1–5) | slot 2: `2E 69 45 02 B0` |
+| Burbles | `0x6946` | slot 0–5 | slot 1: `2E 69 46 01 B0` |
+| Max Cooling | `0x6947` | 0 off, 1 on | on: `2E 69 47 01 B1` |
+
+A busy DME (NRC `0x21`) is asked again, up to 20 times 200 ms apart, as the app does. **Writes only:** the app reads
+the active slot and which slots are valid from RAM addresses that come from the Custom Code version's A2L, which are
+not known here, so the screen says *accepted*, never *confirmed*, shows no active slot until you press one, and
+greys out nothing. Max Cooling is not gated on the engine speed (the app doesn't either). **Not yet tried on a
+car.** Independent of and unaffiliated with MG Flasher.
+
+**Adding a tune** (MG Flasher's bytes, or other tuning software): `tune.js` (`TuneControl`) is the same for
+every tune; what a tune sends is a driver in `tuners.js`. A tune made of short UDS requests is a **SPEC**, plain
+data: the request for each map, burble slot and cooling state, how the DME's answer is accepted (by default its
+echo), and optionally an identification request (which Custom Code or ROM) and a read request (the active map and
+slot, and which slots are valid), which make the screen say *confirmed*. A tune that reads and writes memory
+(BM3) is a class with the same few methods (`refresh`, `setMap`, `setBurbles`, ...; the interface is listed at the
+top of `tuners.js`). Then add the choice to `tuner` in `app.json` and a test case in
+`kit/tools/test_live_adjustments.js` (it has a SPEC with made-up bytes as the model). Contributions from owners who can capture the commands
 on their own car are welcome; please test in the live emulator (`node kit/tools/emu.js
 live_adjustments`) before opening a PR.
 
@@ -181,6 +202,6 @@ Review the rest of the app log for personal information before sharing it.
 
 ```sh
 python3 kit/tools/build.py live_adjustments
-node kit/tools/test_live_adjustments.js     # in-memory DMEs: off / MHD / BM3 / wrong tune / untuned; in-memory DSC: xDrive
+node kit/tools/test_live_adjustments.js     # in-memory DMEs: off / MHD / BM3 / MG Flasher spec / wrong tune / untuned; in-memory DSC: xDrive
 node kit/tools/test_bm3_protocol.js         # BM3 protocol and ROM profiles
 ```
