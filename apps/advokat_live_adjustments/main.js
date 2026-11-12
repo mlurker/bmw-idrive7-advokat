@@ -108,6 +108,7 @@ mgu.run({
             v.pages = list;
             v.page = page;
             v.tune = tune.view();
+            v.version = ctx.spec.version;
             if (page === 'xDrive' || page === 'xDrive live') {
                 const r = xdrive.tick();             // DBE1 read now and then, only on this tab
                 if (r) r.then(repaint).catch((e) => log.error('xdrive', e));

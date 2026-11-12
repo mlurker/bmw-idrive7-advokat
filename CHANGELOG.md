@@ -9,6 +9,8 @@ Changes against the original app, `live_adjustments` 0.9.3 (Engine Config) in
 - **A refusal from the DME shows its code.** "Not available on this car" now reads "Not available on this car (NRC 31)"
   (the UDS negative response code), so the reason (unknown DID, wrong session, security access) can be read off the screen
   and not only from the app's log. This applies to MHD and MG Flasher alike.
+- **The app's version is shown** in small grey text in the top-right corner of every page (`v10.11.0`). The Settings tab is
+  drawn by the kit and has none.
 
 ## 10.10.0
 

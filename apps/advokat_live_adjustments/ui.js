@@ -23,7 +23,14 @@ const { t: translate } = require('./kit/i18n');
 
 const W = 1600, H = 520;
 
+/** One page of the app, with the app's version small in the top-right corner of every page. */
 function draw(cv, G, t, v, act) {
+    drawPage(cv, G, t, v, act);
+    if (v.version) cv.text('v' + v.version, W - 40, G.TOP + 24, 15, t.dim, { align: 'right', font: 'label', literal: true });
+    return cv;
+}
+
+function drawPage(cv, G, t, v, act) {
     cv.clear(t.bg);
 
     // --- page tabs in the house style, one per adjustment. On the car G.frame pushes the
