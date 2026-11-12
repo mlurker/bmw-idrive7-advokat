@@ -4,6 +4,12 @@ Changes against the original app, `live_adjustments` 0.9.3 (Engine Config) in
 [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps), taken at commit `2c6cfdf`
 (Merge PR #139). This repository's version numbers start at 10.10.0.
 
+## 10.11.0
+
+- **A refusal from the DME shows its code.** "Not available on this car" now reads "Not available on this car (NRC 31)"
+  (the UDS negative response code), so the reason (unknown DID, wrong session, security access) can be read off the screen
+  and not only from the app's log. This applies to MHD and MG Flasher alike.
+
 ## 10.10.0
 
 ### The app: `advokat_live_adjustments`

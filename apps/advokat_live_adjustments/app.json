@@ -2,7 +2,7 @@
   "id": "advokat_live_adjustments",
   "title": "Advokat Engine Config",
   "description": "Engine Config for BMW MGU ID7. Exhaust Flap: OEM, OPEN and CLOSE over the car's own diagnostic link, or following the driving mode (Sport open, Eco Pro closed); held against the DME's timeout, Close handed back above a set engine speed. With BM3, MHD or MG Flasher picked in Settings: engine map switching, burbles, ASD (BM3) and Max Cooling (MHD, MG Flasher). Experimental: xDrive off until the ignition cycle (DSC LMV_FUNKTION), behind its own setting",
-  "version": "10.10.0",
+  "version": "10.11.0",
   "vendor": "custom",
   "loggingId": "ADV0",
   "iconGlyph": "sliders",

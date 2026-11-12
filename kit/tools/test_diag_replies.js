@@ -144,7 +144,7 @@ const echo = (sid, data) => [sid + 0x40].concat(data);
     b = bus((sid, data) => (sid === 0x2F ? [FOREIGN, [0x7F, 0x2F, 0x31]] : null));   // an untuned DME still refuses
     await tune.start(b.link);
     await tune.setMap(2);
-    assert.strictEqual(tune.note, 'Not available on this car');
+    assert.strictEqual(tune.note, 'Not available on this car (NRC 31)');
 
     // 6. Settings: with the DME found, a theme change sends nothing; Car control re-detects it; while none
     // was found (asleep at start-up), any change looks again.

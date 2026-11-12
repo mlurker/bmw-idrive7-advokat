@@ -111,7 +111,7 @@ class CommandDriver {
         if (r && r.ok && ack(r, req)) return r;
         if (r && r.nrc != null) {
             this.log.info('tune: DME refused ' + req.sid.toString(16).toUpperCase() + ' ' + DME_HEX(req.data) + ' (' + r.reason + ')');
-            throw new Error('Not available on this car');
+            throw new Error('Not available on this car (NRC ' + r.nrc.toString(16).toUpperCase().padStart(2, '0') + ')');
         }
         throw new Error('No answer from the DME');
     }

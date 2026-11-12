@@ -648,7 +648,7 @@ async function mgFlasherChecks() {
     // A DME without the MG Flasher Custom Code refuses the write: nothing is recorded.
     const plain = await setup('stock', 'mgflasher');
     await plain.tune.setMap(2);
-    assert.strictEqual(plain.tune.note, 'Not available on this car');
+    assert.strictEqual(plain.tune.note, 'Not available on this car (NRC 31)');
     assert.strictEqual(plain.tune.map, null);
 
     // Made-up bytes: identified, state read, slots the DME does not offer, read-back confirmation.
@@ -795,7 +795,7 @@ async function mgFlasherChecks() {
     // MHD picked on an untuned DME: it refuses, nothing is recorded as done.
     s = await setup('stock', 'mhd');
     await s.tune.setMap(1);
-    assert.strictEqual(s.tune.note, 'Not available on this car');
+    assert.strictEqual(s.tune.note, 'Not available on this car (NRC 31)');
     assert.strictEqual(s.tune.map, null);
     await s.tune.setCooling(true);
     assert.strictEqual(s.tune.cooling, null);
